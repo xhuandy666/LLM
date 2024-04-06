@@ -1,0 +1,18 @@
+import static org.junit.Assert.assertEquals
+
+class MyTest {
+    @Test
+    void testRoleValue() {
+        // Given
+        def data = [
+            "role": "user",
+            // Add other properties if needed
+        ]
+
+        // When
+        def role = data["role"]
+
+        // Then
+        assertEquals("user", role)
+    }
+}
