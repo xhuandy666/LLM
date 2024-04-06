@@ -59,6 +59,7 @@ style="width: 700px;"
   >
 </el-input>
 <el-button  type="primary" plain @click="sendMessage()">发送</el-button>
+<el-button type="danger" plain @click="clearAll()">清空</el-button>
 
   </div>
   </div>
@@ -123,26 +124,32 @@ export default {
     return {
       textarea: '',
       messages: [],
-      newMessage: ''
+      newMessage: '',
+      copyNewMessage: ''
     };
   },
   methods: {
     sendMessage() {
+      this.copyNewMessage = this.newMessage;
+      this.newMessage = '';
+      this.messages.push(this.copyNewMessage);
       // Make a request to the backend using Axios or Fetch
       // Replace 'backend-url' with the actual URL of your Flask backend
-      axios.post('http://127.0.0.1:5000/api/data', { message: this.newMessage })
+      axios.post('http://127.0.0.1:5000/api/data', { message: this.copyNewMessage })
         .then(response => {
           // Handle the response from the backend
           // For example, you can update the messages array with the response data
-          console.log(response.data);
+          // console.log(response.data);
           this.messages.push(response.data);
-          // Clear the input field
-          this.newMessage = '';
         })
         .catch(error => {
           // Handle any errors that occur during the request
           console.error(error);
         });
+    },
+
+    clearAll() {
+      this.messages = [];
     }
   }
 };

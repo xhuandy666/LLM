@@ -1,6 +1,7 @@
 from flask import Flask
 from flask import Flask, jsonify, request
 from flask_cors import CORS  # Import the CORS module
+from ESpeed import *
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Enable CORS for all routes
@@ -22,15 +23,14 @@ def get_data():
 
 @app.route('/api/data', methods=['POST'])
 def post_data():
-    # Handle POST request from Vue frontend
-    # Retrieve data from the request body
+
     data = request.get_json()
-    # Process the data
-    # ...
-    # Return a response
-    response = {'message': 'Data received'}
+
+    response = get_response(data['message'])
+
+    # response = {'message': 'Data received'}
    
-    return jsonify(data)
+    return jsonify(response)
 
 if __name__ == '__main__':
     app.run()
