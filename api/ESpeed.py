@@ -2,6 +2,8 @@ import requests
 import json
 import markdown2
 
+message = []
+
 def get_access_token():
     """
     使用 API Key，Secret Key 获取access_token，替换下列示例中的应用API Key、应用Secret Key
@@ -19,30 +21,61 @@ def get_access_token():
     return response.json().get("access_token")
 
 
+# def get_response(content):
+
+#     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=" + get_access_token()
+    
+#     payload = json.dumps({
+#         "messages": [
+#             {
+#                 "role": "user",
+#                 "content": content+"。注意,请不要加任何多余的文字描述。"
+#             }
+#         ]
+#     })
+#     headers = {
+#         'Content-Type': 'application/json'
+#     }
+    
+#     response = requests.request("POST", url, headers=headers, data=payload)
+    
+#     # print(json.loads(response.text)["result"])
+#     # html_table = markdown2.markdown(json.loads(response.text)["result"])
+#     # return json.loads({'html_table': html_table})
+
+#     return json.loads(response.text)["result"]
+
+
 def get_response(content):
 
     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=" + get_access_token()
     
-    payload = json.dumps({
-        "messages": [
-            {
-                "role": "user",
-                "content": content+"。注意,请不要加任何多余的文字描述。"
-            }
-        ]
+    message.append({
+        "role": "user",
+        "content": content
     })
+
+    payload = json.dumps({
+        "messages": message
+    })
+
     headers = {
         'Content-Type': 'application/json'
     }
-    
-    response = requests.request("POST", url, headers=headers, data=payload)
-    
-    # print(json.loads(response.text)["result"])
-    # html_table = markdown2.markdown(json.loads(response.text)["result"])
-    # return json.loads({'html_table': html_table})
 
-    return json.loads(response.text)["result"]
-    
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    message.append({
+        "role": "assistant",
+        "content": json.loads(response.text)["result"]
+    })
+
+    # print(message)
+
+    return message
+
+def clear_message():
+    message.clear()
 
 # if __name__ == '__main__':
 #     main()

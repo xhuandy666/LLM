@@ -20,15 +20,16 @@
     <div slot="header" class="head">  
       <span style="font-weight: bold;font-size: 15px;margin-top:-55px;">TablesGenerator</span>
     </div>
-    <div id="dialog_container">
-      
-        <el-divider content-position="right">{{ user_name }} </el-divider>
+    <div id="dialog_container" style="display: flex;flex-direction: column;">
+            <div v-for="message in messages" :class="['message', message.role === 'user' ? 'user' : 'assistant']">
+                {{ message.content }}
+            </div>
+        <!-- <el-divider content-position="right">{{ user_name }} </el-divider>
         <span id="question_card" style="font-size: 15px;">{{ user_question }}</span>
         <el-divider content-position="left">回答</el-divider>
         <span id="answer_card">
           <v-md-editor :value="tableResult" mode="preview"></v-md-editor>
-
-            </span>
+        </span> -->
       </div>
     
     <el-divider ></el-divider>
@@ -49,6 +50,21 @@
 </el-container>
 </template>
 <style lang="scss" scoped>
+
+.message {
+    max-width: 50%;
+    word-wrap: break-word;
+}
+
+.user{
+  margin-left: auto;
+  align-self: flex-end;
+}
+
+.assistant{
+  margin-right: auto;
+  align-self: flex-start;
+}
 
 .question_card{
   justify-content: flex-end;
@@ -151,9 +167,14 @@ export default {
       copyNewMessage: '',
       tableResult: '',
       user_name: 'user',
+      messages: []
     };
   },
   methods: {
+    clearHistory(){
+      axios.get('http://127.0.0.1:5000/api/clear')
+    },
+
     fetchTable() {
       this.copyNewMessage = this.newMessage;
       this.newMessage = '';
@@ -161,7 +182,8 @@ export default {
       this.messages.push(this.copyNewMessage);
       axios.post('http://127.0.0.1:5000/api/data', { message: this.copyNewMessage })
         .then(response => {
-          this.tableResult = response.data;
+          this.messages = response.data;
+          // this.tableResult = response.data;
         })
         .catch(error => {
           console.error('Error fetching table:', error);
@@ -196,7 +218,7 @@ export default {
     }
   },
   mounted() {
-    this.fetchTable();
+    this.clearHistory();
   }
 }
 </script>

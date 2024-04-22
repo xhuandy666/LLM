@@ -38,6 +38,10 @@ def post_data():
     # return jsonify({'html_table': html_table})
     return jsonify(response)
 
+@app.route('/api/clear', methods=['GET'])
+def clear_history():
+    clear_message()
+    return jsonify({'message': 'History cleared'})
 # @app.route('/markdown-to-table', methods=['GET'])
 # def markdown_to_table():
 #     # 这里假设你已经有了markdown格式的表格数据，假设为markdown_text
