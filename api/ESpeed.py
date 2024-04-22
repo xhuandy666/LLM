@@ -1,5 +1,6 @@
 import requests
 import json
+import markdown2
 
 def get_access_token():
     """
@@ -26,7 +27,7 @@ def get_response(content):
         "messages": [
             {
                 "role": "user",
-                "content": content
+                "content": content+"。注意,请不要加任何多余的文字描述。"
             }
         ]
     })
@@ -37,6 +38,8 @@ def get_response(content):
     response = requests.request("POST", url, headers=headers, data=payload)
     
     # print(json.loads(response.text)["result"])
+    # html_table = markdown2.markdown(json.loads(response.text)["result"])
+    # return json.loads({'html_table': html_table})
 
     return json.loads(response.text)["result"]
     
