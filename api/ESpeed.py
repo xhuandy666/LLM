@@ -1,5 +1,6 @@
 import requests
 import json
+import markdown2
 
 def get_access_token():
     """
@@ -18,7 +19,7 @@ def get_access_token():
     return response.json().get("access_token")
 
 
-def main():
+def get_response(content):
 
     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=" + get_access_token()
     
@@ -26,7 +27,7 @@ def main():
         "messages": [
             {
                 "role": "user",
-                "content": "小明班级共有20个人，其中男性十人，女性十人，身高范围在165-180，请以此信息生成一张表格，并为其随机赋值,能否直接生成直接表格形式"
+                "content": content+"。注意,请不要加任何多余的文字描述。"
             }
         ]
     })
@@ -36,9 +37,12 @@ def main():
     
     response = requests.request("POST", url, headers=headers, data=payload)
     
-    
-    print(json.loads(response.text)["result"])
+    # print(json.loads(response.text)["result"])
+    # html_table = markdown2.markdown(json.loads(response.text)["result"])
+    # return json.loads({'html_table': html_table})
+
+    return json.loads(response.text)["result"]
     
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

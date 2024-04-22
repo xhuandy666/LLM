@@ -1,6 +1,8 @@
 from flask import Flask
 from flask import Flask, jsonify, request
 from flask_cors import CORS  # Import the CORS module
+import markdown
+from ESpeed import *
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Enable CORS for all routes
@@ -22,15 +24,32 @@ def get_data():
 
 @app.route('/api/data', methods=['POST'])
 def post_data():
-    # Handle POST request from Vue frontend
-    # Retrieve data from the request body
+
     data = request.get_json()
-    # Process the data
-    # ...
-    # Return a response
-    response = {'message': 'Data received'}
-   
-    return jsonify(data)
+
+    response = get_response(data['message'])
+
+    # response = {'message': 'Data received'}
+    #markdown格式转化成html
+    # markdown_table =get_response(data['message'])
+    # html_table = markdown.markdown(markdown_table, extensions=['tables'])
+    
+    # return jsonify(response)
+    # return jsonify({'html_table': html_table})
+    return jsonify(response)
+
+# @app.route('/markdown-to-table', methods=['GET'])
+# def markdown_to_table():
+#     # 这里假设你已经有了markdown格式的表格数据，假设为markdown_text
+#     data = request.get_json()
+#     markdown_text =get_response(data['message'])
+
+#     # 将markdown转换为HTML
+#     html_table = markdown2.markdown(markdown_text)
+
+#     # 返回HTML形式的表格数据给前端页面
+#     return jsonify({'html_table': html_table})
+
 
 if __name__ == '__main__':
     app.run()
