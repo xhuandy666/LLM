@@ -2,7 +2,7 @@
   <el-container>
     <el-header>
       <el-menu
-      :default-active="activeIndex2"
+      :default-active="activeIndex"
       class="el-menu-demo"
       mode="horizontal"
       @select="handleSelect"
@@ -10,6 +10,35 @@
       text-color="#fff"
       active-text-color="#ffd04b">
       <el-menu-item index="1"> <el-button type="text" @click="open">帮助</el-button></el-menu-item>
+      <el-menu-item index="2"> <el-button type="text" @click="dialog = true" style="margin-left:1000px" >设置</el-button></el-menu-item>
+      <el-drawer
+  title="模型切换"
+  :before-close="handleClose"
+  :visible.sync="dialog"
+  direction="rtl"
+  custom-class="demo-drawer"
+  ref="drawer"
+  >
+  <div class="demo-drawer__content">
+    <el-form :model="form">
+    
+      <el-form-item label="模型名称" :label-width="formLabelWidth">
+        <el-select v-model="selectModels" @change="updataInput" placeholder="请选择模型">
+          <el-option label="ERNIE-Speed-128K" value="ERNIE-Speed-128K"></el-option>
+          <el-option label="ERNIE-4.0-8K-0104" value="ERNIE-4.0-8K-0104"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item label="模型介绍" :label-width="formLabelWidth">
+        <el-input type="textarea" autosize v-model="ModelsIntro" :disabled="true"></el-input>
+      </el-form-item>
+    </el-form>
+    <div class="demo-drawer__footer">
+      <el-button @click="cancelForm">取 消</el-button>
+      <el-button type="primary" @click="$refs.drawer.closeDrawer()" :loading="loading">{{ loading ? '提交中 ...' : '确 定' }}</el-button>
+    </div>
+  </div>
+</el-drawer>
+
       <span
       style=" background-color:#545c64 ;position: absolute;color:#fff ;padding-top: 0px;right: 43%;font-size: 20px;font-weight: bold"> 基于大模型的表格数据生成</span>
 
@@ -21,50 +50,109 @@
       <span style="font-weight: bold;font-size: 15px;margin-top:-55px;">TablesGenerator</span>
     </div>
     <div id="dialog_container" style="display: flex;flex-direction: column;">
-            <div v-for="message in messages" :class="['message', message.role === 'user' ? 'user' : 'assistant']">
-                {{ message.content }}
+      <div v-for="message in messages":class="['message-row', message.role === 'user' ? 'right' : 'left']">
+    <!-- 消息展示，分为上下，上面是头像，下面是消息 -->
+        <div class="row">
+      <!-- 头像， -->
+          <div class="avatar-wrapper">
+          <el-avatar
+            v-if="message.role === 'user'"
+            :src="user_Logo"
+            class="avatar"
+            shape="square"
+          />
+          <el-avatar v-else :src="assistant_Logo" class="avatar" shape="square"/>
+          </div>
+      <!-- 发送的消息或者回复的消息 -->
+      <div class="message"  >
+        <!-- 预览模式，用来展示markdown格式的消息 -->
+        <TextLoading v-if="message.content.length<=0"></TextLoading>
+        <v-md-editor :value="message.content" mode="preview" 
+        :style="{backgroundColor:message.role === 'user' ? 'rgb(231, 248, 255)' : '#f4f4f5', width: '500px'}"
+       
+        ></v-md-editor>
+        
+        
+           
+       
+
+            <!-- <div v-for="message in messages" :class="['message', message.role === 'user' ? 'user' : 'assistant']">
+              <v-md-editor :value="message.content" mode="preview"></v-md-editor>
+              
             </div>
-        <!-- <el-divider content-position="right">{{ user_name }} </el-divider>
-        <span id="question_card" style="font-size: 15px;">{{ user_question }}</span>
-        <el-divider content-position="left">回答</el-divider>
-        <span id="answer_card">
-          <v-md-editor :value="tableResult" mode="preview"></v-md-editor>
-        </span> -->
+      -->
       </div>
+    </div>
+    </div>
+    </div>
     
     <el-divider ></el-divider>
     <el-input
         type="textarea"
         :autosize="{ minRows: 2, maxRows: 4}"
-        @keydown.enter.native="sendMessage"
+        @keydown.enter.native="fetchTable()"
         v-model="newMessage"
     >
     </el-input>
       <div class="buttons" >
-      <el-button  type="danger" plain @click="fetchTable()">生成表格</el-button>
-      <el-button  type="primary" @click="copy">复制表格</el-button>
+      <el-button  type="danger" plain @click="fetchTable() ">生成表格</el-button>
+      <el-button  type="primary" plain @click="copy()">复制表格</el-button>
     </div>
   </el-card>
-
+<!-- v-clipboard:copy="this.messages.content"
+      v-clipboard:success="onCopy"
+      v-clipboard:error="onError" -->
   </el-main>
 </el-container>
 </template>
 <style lang="scss" scoped>
 
-.message {
-    max-width: 50%;
-    word-wrap: break-word;
-}
+.message-row {
+    display: flex;
 
-.user{
-  margin-left: auto;
-  align-self: flex-end;
-}
+    &.right {
+      // 消息显示在右侧
+      justify-content: flex-end;
 
-.assistant{
-  margin-right: auto;
-  align-self: flex-start;
-}
+      .row {
+        // 头像也要靠右侧
+        .avatar-wrapper {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        // 用户回复的消息和ChatGPT回复的消息背景颜色做区分
+        .message {
+          background-color: rgb(231, 248, 255);
+          
+        }
+      }
+    }
+
+    // 默认靠左边显示
+    .row {
+      .avatar-wrapper {
+        .avatar {
+          box-shadow: 20px 20px 20px 3px rgba(0, 0, 0, 0.03);
+          margin-bottom: 10px;
+          
+        }
+      }
+
+      .message {
+        font-size: 15px;
+        padding: 1.5px;
+        // 限制消息展示的最大宽度
+        max-width: 500px;
+        // 圆润一点
+        border-radius: 7px;
+        // 给消息框加一些描边，看起来更加实一些，要不然太扁了轻飘飘的。
+        border: 1px solid rgba(black, 0.1);
+        // 增加一些阴影看起来更加立体
+        box-shadow: 20px 20px 20px 1px rgba(0, 0, 0, 0.01);
+      }
+    }
+  }
 
 .question_card{
   justify-content: flex-end;
@@ -157,25 +245,68 @@
 <script>
 
 import axios from 'axios';
+import TextLoading from './components/TextLoading.vue';
 export default {
   data() {
     return {
       textarea: '',
       messages: [],
-      newMessage: '',
+      newMessage:'',
+      copiedList: [],
       user_question: '',
       copyNewMessage: '',
-      tableResult: '',
       user_name: 'user',
-      messages: []
+      user_Logo: "https://img0.baidu.com/it/u=2864837501,1810663520&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
+      assistant_Logo: "https://img1.baidu.com/it/u=1435371121,2079334441&fm=253&fmt=auto&app=138&f=JPEG?w=1216&h=585",
+      dialog: false,
+      loading: false,
+      selectModels: '',
+      ModelsIntro: '',
+      form: {
+        name: '',
+        region: '',
+        date1: '',
+        date2: '',
+        delivery: false,
+        type: [],
+        resource: '',
+        desc: ''
+      },
+      formLabelWidth: '80px',
+      timer: null,
     };
   },
   methods: {
+    updataInput(){
+      if(this.selectModels === 'ERNIE-Speed-128K'){
+        this.ModelsIntro = 'ERNIE Speed是百度2024年最新发布的自研高性能大语言模型，通用能力优异，适合作为基座模型进行精调，更好地处理特定场景问题，同时具备极佳的推理性能。';
+      }else if(this.selectModels === 'ERNIE-4.0-8K-0104'){
+        this.ModelsIntro = 'ERNIE 4.0是百度自研的旗舰级超大规模⼤语⾔模型，相较ERNIE 3.5实现了模型能力全面升级，广泛适用于各领域复杂任务场景；支持自动对接百度搜索插件，保障问答信息时效。';
+      }
+    },
+    
+
     clearHistory(){
       axios.get('http://127.0.0.1:5000/api/clear')
     },
-
+    starLoading() {
+    // 创建一个 loading 实例并赋值给 loading 变量
+    let loading = this.$loading({
+        text: "加载中", // 设置 loading 文本为 "加载中"
+        spinner: "el-icon-loading", // 使用 Element UI 提供的加载图标
+        background: "rgba(0, 0, 0, 0.7)", // 设置 loading 遮罩层背景色为半透明黑色
+        target: document.querySelector("body"), // 将 loading 遮罩层挂载到页面 body 元素上
+    });
+    
+    return {
+        // 方法用于关闭 loading 遮罩层
+        closeLoading: () => {
+            loading.close(); // 调用 loading 实例的 close 方法关闭遮罩层
+        }
+    };
+    },
     fetchTable() {
+      this.loadingInstance  = this.starLoading();
       this.copyNewMessage = this.newMessage;
       this.newMessage = '';
       this.user_question=this.copyNewMessage
@@ -184,17 +315,26 @@ export default {
         .then(response => {
           this.messages = response.data;
           // this.tableResult = response.data;
+          this.$nextTick(() => {
+			// 在 nextTick 之后关闭 loading
+				this.loadingInstance.closeLoading();
+			});
+
         })
         .catch(error => {
           console.error('Error fetching table:', error);
         });
+       
     },
     copy() {
+      this.copiedList=this.messages
+      this.copiedList.reverse()
+    
       // navigator.clipboard.writeText 该方法需要在安全域下才能够使用，比如：https 协议的地址、127.0.0.1、localhost
       navigator.clipboard
-        .writeText(this.tableResult)
+        .writeText(this.copiedList[0].content)
         .then(() => {
-          this.$tableResult.success("复制成功");
+          this.$message.success("复制成功");
         })
         .catch((err) => {
           // 复制失败
@@ -202,7 +342,13 @@ export default {
         });
     },
 
-
+    // onError() {
+    //   console.error("复制失败");
+    // },
+    // // 复制
+    // onCopy() {
+    //   this.$message.success("复制成功");
+    // },
 
 
     sendMessage() {
@@ -215,7 +361,30 @@ export default {
 
     clearAll() {
       this.messages = [];
+    },
+    handleClose(done) {
+      if (this.loading) {
+        return;
+      }
+      this.$confirm('确定要提交表单吗？')
+        .then(_ => {
+          this.loading = true;
+          this.timer = setTimeout(() => {
+            done();
+            // 动画关闭需要一定的时间
+            setTimeout(() => {
+              this.loading = false;
+            }, 400);
+          }, 2000);
+        })
+        .catch(_ => {});
+    },
+    cancelForm() {
+      this.loading = false;
+      this.dialog = false;
+      clearTimeout(this.timer);
     }
+  
   },
   mounted() {
     this.clearHistory();
