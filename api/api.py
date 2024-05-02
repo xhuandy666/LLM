@@ -27,7 +27,7 @@ def post_data():
 
     data = request.get_json()
 
-    response = get_response(data['message'])
+    response = get_response(data['message'],data['model'])
 
     # response = {'message': 'Data received'}
     #markdown格式转化成html

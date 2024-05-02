@@ -24,8 +24,8 @@
     
       <el-form-item label="模型名称" :label-width="formLabelWidth">
         <el-select v-model="selectModels" @change="updataInput" placeholder="请选择模型">
-          <el-option label="ERNIE-Speed-128K" value="ERNIE-Speed-128K"></el-option>
-          <el-option label="ERNIE-4.0-8K-0104" value="ERNIE-4.0-8K-0104"></el-option>
+          <el-option label="ERNIE-Speed-128K" value="ernie-speed-128k"></el-option>
+          <el-option label="ERNIE-4.0-8K-0329" value="ernie-4.0-8k-0329"></el-option>
         </el-select>
       </el-form-item>
       <el-form-item label="模型介绍" :label-width="formLabelWidth">
@@ -278,14 +278,13 @@ export default {
   },
   methods: {
     updataInput(){
-      if(this.selectModels === 'ERNIE-Speed-128K'){
+      if(this.selectModels === 'ernie-speed-128k'){
         this.ModelsIntro = 'ERNIE Speed是百度2024年最新发布的自研高性能大语言模型，通用能力优异，适合作为基座模型进行精调，更好地处理特定场景问题，同时具备极佳的推理性能。';
-      }else if(this.selectModels === 'ERNIE-4.0-8K-0104'){
+      }else if(this.selectModels === 'ernie-4.0-8k-0329'){
         this.ModelsIntro = 'ERNIE 4.0是百度自研的旗舰级超大规模⼤语⾔模型，相较ERNIE 3.5实现了模型能力全面升级，广泛适用于各领域复杂任务场景；支持自动对接百度搜索插件，保障问答信息时效。';
       }
     },
     
-
     clearHistory(){
       axios.get('http://127.0.0.1:5000/api/clear')
     },
@@ -311,7 +310,7 @@ export default {
       this.newMessage = '';
       this.user_question=this.copyNewMessage
       this.messages.push(this.copyNewMessage);
-      axios.post('http://127.0.0.1:5000/api/data', { message: this.copyNewMessage })
+      axios.post('http://127.0.0.1:5000/api/data', { message: this.copyNewMessage, model: this.selectModels})
         .then(response => {
           this.messages = response.data;
           // this.tableResult = response.data;

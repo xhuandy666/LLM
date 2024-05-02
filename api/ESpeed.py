@@ -46,9 +46,10 @@ def get_access_token():
 #     return json.loads(response.text)["result"]
 
 
-def get_response(content):
+def get_response(content,model):
+    print(model)
 
-    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=" + get_access_token()
+    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/" + model + "?access_token=" + get_access_token()
     
     message.append({
         "role": "user",
