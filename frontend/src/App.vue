@@ -10,7 +10,7 @@
       text-color="#fff"
       active-text-color="#ffd04b">
       <el-menu-item index="1"> <el-button type="text" @click="open">帮助</el-button></el-menu-item>
-      <el-menu-item index="2"> <el-button type="text" @click="dialog = true" style="margin-left:1000px" >设置</el-button></el-menu-item>
+      <el-menu-item index="2"> <el-button type="text" @click="dialog = true" style="margin-left:1700px" >设置</el-button></el-menu-item>
       <el-drawer
   title="模型切换"
   :before-close="handleClose"
@@ -34,13 +34,13 @@
     </el-form>
     <div class="demo-drawer__footer">
       <el-button @click="cancelForm">取 消</el-button>
-      <el-button type="primary" @click="$refs.drawer.closeDrawer()" :loading="loading">{{ loading ? '提交中 ...' : '确 定' }}</el-button>
+      <el-button type="primary" @click="$refs.drawer.closeDrawer()" :loading="loading">{{ loading ? '切换中 ...' : '确 定' }}</el-button>
     </div>
   </div>
 </el-drawer>
 
       <span
-      style=" background-color:#545c64 ;position: absolute;color:#fff ;padding-top: 0px;right: 43%;font-size: 20px;font-weight: bold"> 基于大模型的表格数据生成</span>
+      style=" background-color:#545c64 ;position: absolute;color:#fff ;padding-top: 0px;right: 43%;font-size: 17px;font-weight: bold"> 基于大模型的表格数据生成</span>
 
       </el-menu>
     </el-header>
@@ -93,10 +93,18 @@
         @keydown.enter.native="fetchTable()"
         v-model="newMessage"
     >
+    <!-- <template slot="append"> //插槽插入文字按钮
+      <el-button 
+      type="text"
+      :disabled="coolDown"
+      @click="AutoOptimize()">指令优化</el-button>
+      </template> -->
     </el-input>
       <div class="buttons" >
       <el-button  type="danger" plain @click="fetchTable() ">生成表格</el-button>
       <el-button  type="primary" plain @click="copy()">复制表格</el-button>
+      <el-button  type="primary" plain @click="clearAll()">清除记录</el-button>
+      <el-button  type="primary" plain @click="AutoOptimize()":loading="loading">{{ loading ? '优化中 ...' : '指令优化' }}</el-button>
     </div>
   </el-card>
 <!-- v-clipboard:copy="this.messages.content"
@@ -277,6 +285,17 @@ export default {
     };
   },
   methods: {
+    AutoOptimize(){
+      this.loading = true;
+      axios.post('http://127.0.0.1:5000/api/optimize', { message: this.newMessage})
+        .then(response => {
+          this.newMessage = response.data;
+          this.loading = false;
+        })
+        .catch(error => {
+          console.error('Error optimize prompt:', error);
+        });
+    },
     updataInput(){
       if(this.selectModels === 'ernie-speed-128k'){
         this.ModelsIntro = 'ERNIE Speed是百度2024年最新发布的自研高性能大语言模型，通用能力优异，适合作为基座模型进行精调，更好地处理特定场景问题，同时具备极佳的推理性能。';
@@ -365,7 +384,7 @@ export default {
       if (this.loading) {
         return;
       }
-      this.$confirm('确定要提交表单吗？')
+      this.$confirm('确定要切换模型吗？')
         .then(_ => {
           this.loading = true;
           this.timer = setTimeout(() => {
@@ -373,10 +392,14 @@ export default {
             // 动画关闭需要一定的时间
             setTimeout(() => {
               this.loading = false;
+              this.messages = [];
             }, 400);
           }, 2000);
-        })
+        }
+        
+      )
         .catch(_ => {});
+        
     },
     cancelForm() {
       this.loading = false;

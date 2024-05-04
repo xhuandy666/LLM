@@ -3,6 +3,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS  # Import the CORS module
 import markdown
 from ESpeed import *
+from Optimize import *
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)  # Enable CORS for all routes
@@ -21,6 +22,16 @@ def get_data():
     data = request.get_json()
     
     return jsonify(data)
+
+
+@app.route('/api/optimize', methods=['POST'])
+def post_optimize():
+    data = request.get_json()
+
+    response = get_reply(data['message'])
+
+    return jsonify(response)
+
 
 @app.route('/api/data', methods=['POST'])
 def post_data():

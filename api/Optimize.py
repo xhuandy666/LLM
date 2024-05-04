@@ -1,32 +1,7 @@
-# import csv
-# import re
- 
-# def markdown_to_csv(markdown_table):
-#     # 使用正则表达式分割行
-#     rows = re.findall(r'(?:\|.*?\n)', markdown_table)
- 
-#     # 去除行首尾的管道符和空白符
-#     rows = [row.strip().lstrip('|').rstrip('|').split('|') for row in rows]
- 
-#     # 创建CSV文件对象
-#     with open('output.csv', 'w', newline='', encoding='utf-8') as csvfile:
-#         writer = csv.writer(csvfile)
-#         for row in rows:
-#             writer.writerow(row)
- 
-# # 示例Markdown表格
-# markdown_table = """
-# | Name  | Age | City     |
-# |-------|-----|----------|
-# | Alice | 30  | New York |
-# | Bob   | 25  | London   |
-# | Cathy | 32  | Paris    |
-# """
- 
-# # 调用函数转换并保存CSV
-# markdown_to_csv(markdown_table)
 import requests
 import json
+
+message = []
 
 def get_access_token():
     """
@@ -44,14 +19,13 @@ def get_access_token():
     response = requests.request("POST", url, headers=headers, data=payload)
     return response.json().get("access_token")
 
-def main():
+def get_reply(content):
     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-4.0-8k-0329?access_token=" + get_access_token()
-    
     payload = json.dumps({
         "messages": [
             {
                 "role": "user",
-                "content": ''' I want you to act as an AI prompt engineer. You are expert at writing Prompts to get the best results.
+                "content":''' I want you to act as an AI prompt engineer. You are expert at writing Prompts to get the best results.
 
             To create efficient prompts that yield high-quality responses, consider the following principles and strategies: \
             1. Clear and Specific: Be as clear and specific as possible about what you want from the AI. If you want a certain type of response, outline that in your prompt. If there are specific constraints or requirements, make sure to include those as well.
@@ -63,7 +37,7 @@ def main():
 
             Your task is to write an effective  Prompt based on given keywords or to modify the given prompts. Answer in the Chinese please.
             
-            Please help me to write an effective Prompt based on the following keywords or prompt:明班级共有10个人，其中男性5人，女性5人，身高范围在165-180，请以此信息生成一张表格，并为其随机赋值,能否直接生成直接表格形式'''
+            Please help me to write an effective Prompt based on the following keywords or prompt:'''+content
             }
         ]
     })
@@ -71,10 +45,46 @@ def main():
         'Content-Type': 'application/json'
     }
     
+   
+    
     response = requests.request("POST", url, headers=headers, data=payload)
     
-    print(response.text)
+    return json.loads(response.text)["result"]
     
 
 if __name__ == '__main__':
-    main()
+    get_reply()
+    # return json.loads(response.text)["result"]
+
+
+# def get_response(content):
+    
+
+#     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-4.0-8k-0329?access_token=" + get_access_token()
+    
+#     message.append({
+#         "role": "user",
+#         "content": content
+#     })
+
+#     payload = json.dumps({
+#         "messages": message
+#     })
+
+#     headers = {
+#         'Content-Type': 'application/json'
+#     }
+
+#     response = requests.request("POST", url, headers=headers, data=payload)
+
+#     message.append({
+#         "role": "assistant",
+#         "content": json.loads(response.text)["result"]
+#     })
+
+#     # print(message)
+
+#     return message
+
+# def clear_message():
+#     message.clear()
