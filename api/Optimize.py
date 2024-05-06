@@ -25,19 +25,8 @@ def get_reply(content):
         "messages": [
             {
                 "role": "user",
-                "content":''' I want you to act as an AI prompt engineer. You are expert at writing Prompts to get the best results.
-
-            To create efficient prompts that yield high-quality responses, consider the following principles and strategies: \
-            1. Clear and Specific: Be as clear and specific as possible about what you want from the AI. If you want a certain type of response, outline that in your prompt. If there are specific constraints or requirements, make sure to include those as well.
-            2. Open-ended vs. Closed-ended: Depending on what you're seeking, you might choose to ask an open-ended question (which allows for a wide range of responses) or a closed-ended question (which narrows down the possible responses). Both have their uses, so choose according to your needs.
-            3. Contextual Clarity: Make sure to provide enough context so that the AI can generate a meaningful and relevant response. If the prompt is based on prior information, ensure that this is included.
-            4. Creativity and Imagination: If you want creative output, encourage the AI to think outside the box or to brainstorm. You can even suggest the AI to imagine certain scenarios if it fits your needs.
-
-            There is a well-written prompt delimited by <> for your reference: <Your task is to be my brainstorming partner and provide creative ideas and suggestions for a given topic or problem. Your response should include original, unique, and relevant ideas that could help solve the problem or further explore the topic in an interesting way. Please note that your response should also take into account any specific requirements or constraints of the task.>
-
-            Your task is to write an effective  Prompt based on given keywords or to modify the given prompts. Answer in the Chinese please.
-            
-            Please help me to write an effective Prompt based on the following keywords or prompt:'''+content
+                "content": "能力与角色：你将担任我的表格数数据生成提示词优化顾问。作为一名深谙大模型提示词撰写之道的专家，你的目标是协助我精炼和提升prompt的效能，从而确保用户能够获取到更为精准、高效的表格数据回应。 背景信息：目前，我正处于一个基于大模型的表格数数据生成系统的开发阶段。此系统旨在为用户提供便捷、高效的表格生成服务。在这个过程中，你的核心任务是帮助我对用户提出的prompt进行细致优化，以便达成更出色的数据生成效果。指令:请帮我优化用户给出的提示词：{}".format(content)+"要求让大模型可以根据用户输入的内容更精确、高效的输出表格数据。要求输出的结果只包含优化后的提示词，不要有任何多余的文字说明。"
+                            +"可以从以下几个方面入手：1. 考虑到表格数据的准确性和完整性，确保生成的指令能够准确生成所需的数据。2. 考虑到生成的表格数据可能用于多种场景和用途，确保生成的指令具有灵活性和可扩展性。3. 考虑到生成结果的展示和美观性，确保生成的指令具有可读性和可维护性。"+"以下是一个优化案例用<>划分供你参考。优化前:<小明班级共有10个人，其中男性5人，女性5人，身高范围在165-180。>优化后:<请根据以下要求，使用上述信息，为小明班级的学生生成一张信息表格：表格中应包含学生的姓名、性别和具体的身高值（在165-180范围内随机赋值）。确保表格中列出的10名学生信息各不相同，其中5名为男性，5名为女性。设计的表格要简洁明了，数据要清晰可读。为保证数据的随机性和真实性，请为每名学生的身高在指定范围内随机赋值，并确保不出现重复的组合。请根据上述指令，为小明班级的学生生成一张满足所有要求的表格。> "                   
             }
         ]
     })

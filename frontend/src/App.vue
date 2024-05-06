@@ -101,10 +101,11 @@
       </template> -->
     </el-input>
       <div class="buttons" >
-      <el-button  type="danger" plain @click="fetchTable() ">生成表格</el-button>
-      <el-button  type="primary" plain @click="copy()">复制表格</el-button>
-      <el-button  type="primary" plain @click="clearAll()">清除记录</el-button>
-      <el-button  type="primary" plain @click="AutoOptimize()":loading="loading">{{ loading ? '优化中 ...' : '指令优化' }}</el-button>
+      <el-button  type="success"  icon="el-icon-thumb" plain @click="fetchTable() ">生成表格</el-button>
+      <el-button  type="warning" icon="el-icon-paperclip" plain @click="copy()">复制表格</el-button>
+      <el-button  type="danger" icon="el-icon-delete" plain @click="clearAll()">清除记录</el-button>
+      <el-button  type="primary" icon="el-icon-star-on" plain @click="AutoOptimize()":loading="loading">{{ loading ? '优化中 ...' : '指令优化' }}</el-button>
+      <el-button  type="primary" icon="el-icon-upload" plain @click="exportCsv()">导出csv</el-button>
     </div>
   </el-card>
 <!-- v-clipboard:copy="this.messages.content"
@@ -254,9 +255,13 @@
 
 import axios from 'axios';
 import TextLoading from './components/TextLoading.vue';
+import MarkdownIt from 'markdown-it';  
+import Papa from 'papaparse';  
+
 export default {
   data() {
     return {
+      md: new MarkdownIt(),
       textarea: '',
       messages: [],
       newMessage:'',
@@ -265,7 +270,7 @@ export default {
       copyNewMessage: '',
       user_name: 'user',
       user_Logo: "https://img0.baidu.com/it/u=2864837501,1810663520&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
-      assistant_Logo: "https://img1.baidu.com/it/u=1435371121,2079334441&fm=253&fmt=auto&app=138&f=JPEG?w=1216&h=585",
+      assistant_Logo: "https://img2.baidu.com/it/u=2784541464,2988923813&fm=253&fmt=auto&app=138&f=PNG?w=240&h=240",
       dialog: false,
       loading: false,
       selectModels: '',
@@ -285,6 +290,36 @@ export default {
     };
   },
   methods: {
+    parseMarkdownTable() {  
+      // 解析Markdown文本，并提取出HTML表格  
+      const html = this.md.render(this.messages[this.messages.length - 1].content);  
+      // 这里假设Markdown文本中只有一个表格，你可能需要调整这部分以适应更复杂的情况  
+      const tableHtml = html.match(/<table>[\s\S]*?<\/table>/);  
+      if (!tableHtml) return null;  
+      return tableHtml[0];  
+    },  
+    htmlToTableData(html) {  
+      // 使用DOM解析来提取表格数据  
+      const tempElement = document.createElement('div');  
+      tempElement.innerHTML = html;  
+      const table = tempElement.querySelector('table');  
+      const rows = Array.from(table.querySelectorAll('tr'));  
+      return rows.map(row => Array.from(row.querySelectorAll('td, th')).map(cell => cell.innerText.trim()));  
+    },  
+    exportCsv(){
+      const htmlTable = this.parseMarkdownTable();  
+      if (!htmlTable) return;  
+      const tableData = this.htmlToTableData(htmlTable);  
+      const csv = Papa.unparse(tableData);  
+      // 创建一个blob对象，并创建一个下载链接来下载CSV文件  
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });  
+      const link = document.createElement('a');  
+      link.href = URL.createObjectURL(blob);  
+      link.download = 'table.csv';  
+      link.click();  
+      URL.revokeObjectURL(link.href); // 释放URL对象以节省内存
+    },
+
     AutoOptimize(){
       this.loading = true;
       axios.post('http://127.0.0.1:5000/api/optimize', { message: this.newMessage})
@@ -345,12 +380,12 @@ export default {
        
     },
     copy() {
-      this.copiedList=this.messages
-      this.copiedList.reverse()
+      // this.copiedList=this.messages
+      // this.copiedList.reverse()
     
       // navigator.clipboard.writeText 该方法需要在安全域下才能够使用，比如：https 协议的地址、127.0.0.1、localhost
       navigator.clipboard
-        .writeText(this.copiedList[0].content)
+        .writeText(this.messages[this.messages.length - 1].content)
         .then(() => {
           this.$message.success("复制成功");
         })
