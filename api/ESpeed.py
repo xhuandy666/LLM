@@ -4,6 +4,7 @@ import markdown2
 
 message = []
 
+
 def get_access_token():
     """
     使用 API Key，Secret Key 获取access_token，替换下列示例中的应用API Key、应用Secret Key
@@ -53,7 +54,7 @@ def get_response(content,model):
     
     message.append({
         "role": "user",
-        "content": content
+        "content": content+"。注意,输出的结果请不要加任何多余的文字描述，只输出表格。"
     })
 
     payload = json.dumps({

@@ -54,21 +54,21 @@
     <!-- 消息展示，分为上下，上面是头像，下面是消息 -->
         <div class="row">
       <!-- 头像， -->
-          <div class="avatar-wrapper">
+          <div class="avatar-wrapper" >
           <el-avatar
             v-if="message.role === 'user'"
             :src="user_Logo"
             class="avatar"
             shape="square"
           />
-          <el-avatar v-else :src="assistant_Logo" class="avatar" shape="square"/>
+          <el-avatar v-else :src="assistant_Logo" class="avatar" shape="square" style="margin-bottom: -60px;"/>
           </div>
       <!-- 发送的消息或者回复的消息 -->
       <div class="message"  >
         <!-- 预览模式，用来展示markdown格式的消息 -->
         <TextLoading v-if="message.content.length<=0"></TextLoading>
         <v-md-editor :value="message.content" mode="preview" 
-        :style="{backgroundColor:message.role === 'user' ? 'rgb(231, 248, 255)' : '#f4f4f5', width: '500px'}"
+        :style="{backgroundColor:message.role === 'user' ? 'rgb(231, 248, 255)' : '#f4f4f5', width: '600px'}"
        
         ></v-md-editor>
         
@@ -128,6 +128,10 @@
         .avatar-wrapper {
           display: flex;
           justify-content: flex-end;
+          .avatar {
+            box-shadow: 20px 20px 20px 3px rgba(0, 0, 0, 0.03);
+            margin-bottom: 10px;
+          }
         }
 
         // 用户回复的消息和ChatGPT回复的消息背景颜色做区分
@@ -152,7 +156,7 @@
         font-size: 15px;
         padding: 1.5px;
         // 限制消息展示的最大宽度
-        max-width: 500px;
+        max-width: 600px;
         // 圆润一点
         border-radius: 7px;
         // 给消息框加一些描边，看起来更加实一些，要不然太扁了轻飘飘的。
@@ -183,7 +187,7 @@
 .box-card {
   margin: 2% auto;
   width: 50%;
-  min-width: 900px;
+  min-width: 1100px;
   text-align: left;
 
 }
@@ -196,45 +200,45 @@
   max-height: calc(100vh - 360px);
 }
 
-  // .home-view {
-  //   display: flex;
-  //   /* 与窗口同宽 */
-  //   width: 100vw;
-  //   /* 水平方向上剧中 */
-  //   justify-content: center;
+  .home-view {
+    display: flex;
+    /* 与窗口同宽 */
+    width: 100vw;
+    /* 水平方向上剧中 */
+    justify-content: center;
 
-  //   .chat-panel {
-  //     /* 聊天面板flex布局，让会话列表和聊天记录左右展示 */
-  //     display: flex;
-  //     /* 让聊天面板圆润一些 */
-  //     border-radius: 20px;
-  //     background-color: white;
-  //     /* 给一些阴影 */
-  //     box-shadow: 0 0 20px 20px rgba(black, 0.05);
-  //     /* 与上方增加一些间距 */
-  //     margin-top: 70px;
+    .chat-panel {
+      /* 聊天面板flex布局，让会话列表和聊天记录左右展示 */
+      display: flex;
+      /* 让聊天面板圆润一些 */
+      border-radius: 20px;
+      background-color: white;
+      /* 给一些阴影 */
+      box-shadow: 0 0 20px 20px rgba(black, 0.05);
+      /* 与上方增加一些间距 */
+      margin-top: 70px;
      
-  //     /* 右侧消息记录面板*/
-  //     .message-panel {
-  //       width: 700px;
-  //       height: 800px;
-  //     }
-  //   }
-  // }
-  // .message-input {
-  //   padding: 20px;
-  //   border-top: 1px solid rgba(black, 0.07);
-  //   border-left: 1px solid rgba(black, 0.07);
-  //   border-right: 1px solid rgba(black, 0.07);
-  //   border-top-right-radius: 5px;
-  //   border-top-left-radius: 5px;
-  // }
+      /* 右侧消息记录面板*/
+      .message-panel {
+        width: 700px;
+        height: 800px;
+      }
+    }
+  }
+  .message-input {
+    padding: 20px;
+    border-top: 1px solid rgba(black, 0.07);
+    border-left: 1px solid rgba(black, 0.07);
+    border-right: 1px solid rgba(black, 0.07);
+    border-top-right-radius: 5px;
+    border-top-left-radius: 5px;
+  }
 
-  // .button-wrapper {
-  //   display: flex;
-  //   justify-content: flex-end;
-  //   margin-top: 0px;
-  // }
+  .button-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0px;
+  }
 
 
   .el-header {
@@ -273,8 +277,9 @@ export default {
       assistant_Logo: "https://img2.baidu.com/it/u=2784541464,2988923813&fm=253&fmt=auto&app=138&f=PNG?w=240&h=240",
       dialog: false,
       loading: false,
-      selectModels: '',
-      ModelsIntro: '',
+      selectModels: 'ernie-speed-128k',
+      ModelsIntro: 'ERNIE Speed是百度2024年最新发布的自研高性能大语言模型，通用能力优异，适合作为基座模型进行精调，更好地处理特定场景问题，同时具备极佳的推理性能。',
+      tempModel: '',
       form: {
         name: '',
         region: '',
@@ -413,6 +418,7 @@ export default {
     },
 
     clearAll() {
+      location.reload();
       this.messages = [];
     },
     handleClose(done) {
@@ -422,12 +428,15 @@ export default {
       this.$confirm('确定要切换模型吗？')
         .then(_ => {
           this.loading = true;
+          this.tempModel = this.selectModels;
+          console.log(this.tempModel);
           this.timer = setTimeout(() => {
             done();
             // 动画关闭需要一定的时间
             setTimeout(() => {
               this.loading = false;
-              this.messages = [];
+              
+              this.selectModels = this.tempModel;
             }, 400);
           }, 2000);
         }
