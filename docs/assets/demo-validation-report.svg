@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+  <rect width="1280" height="760" fill="#eef2f6"/>
+  <rect x="86" y="54" width="1092" height="652" rx="10" fill="#ffffff" stroke="#d9e1ea"/>
+  <text x="116" y="106" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#263238">Table Validator Quality Report</text>
+  <rect x="116" y="146" width="160" height="42" rx="21" fill="#e8f5e9" stroke="#81c784"/>
+  <text x="148" y="173" font-family="Arial, sans-serif" font-size="17" font-weight="700" fill="#2e7d32">校验通过</text>
+  <g font-family="Arial, sans-serif" font-size="18" fill="#455a64">
+    <text x="116" y="236">业务场景: 电商订单测试数据</text>
+    <text x="116" y="284">目标行数: 5</text>
+    <text x="116" y="332">实际行数: 5</text>
+    <text x="116" y="380">字段数量: 8</text>
+    <text x="116" y="428">问题数量: 0</text>
+  </g>
+  <rect x="580" y="220" width="520" height="250" rx="8" fill="#f8fafc" stroke="#cfd8dc"/>
+  <text x="612" y="266" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#263238">检查项</text>
+  <g font-family="Arial, sans-serif" font-size="17" fill="#37474f">
+    <text x="612" y="312">✓ Markdown 表格可解析</text>
+    <text x="612" y="354">✓ 行数符合目标要求</text>
+    <text x="612" y="396">✓ 必填字段完整</text>
+    <text x="612" y="438">✓ 金额在 10-500 范围内</text>
+  </g>
+  <rect x="116" y="530" width="984" height="84" rx="6" fill="#e8f5e9" stroke="#a5d6a7"/>
+  <text x="146" y="568" font-family="Arial, sans-serif" font-size="18" fill="#2e7d32">结论: 生成结果满足当前 schema 的行数、字段和约束要求。</text>
+  <text x="146" y="600" font-family="Arial, sans-serif" font-size="15" fill="#388e3c">Validator 不依赖 LLM，是生成结果的确定性质量兜底。</text>
+</svg>

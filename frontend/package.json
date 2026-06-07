@@ -14,7 +14,6 @@
     "element-ui": "^2.15.14",
     "markdown-it": "^14.1.0",
     "marked": "^12.0.2",
-    "node-sass": "^9.0.0",
     "papaparse": "^5.4.1",
     "vue": "^2.6.14",
     "vue-clipboard2": "^0.3.3",
@@ -28,7 +27,6 @@
     "@vue/cli-service": "~5.0.0",
     "less": "^4.0.0",
     "less-loader": "^8.0.0",
-    "sass-loader": "^14.1.1",
     "style-loader": "^3.3.4",
     "vue-template-compiler": "^2.6.14"
   },

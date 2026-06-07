@@ -1,83 +1,33 @@
-import requests
-import json
-import markdown2
+from __future__ import annotations
 
-message = []
-
-
-def get_access_token():
-    """
-    使用 API Key，Secret Key 获取access_token，替换下列示例中的应用API Key、应用Secret Key
-    """
-        
-    url = "https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=T23ZRRjp17sYY2TfnbLItqS7&client_secret=0sNpDFW4Y2EmCHYXfIiUJaTKhl7htSqJ"
-    
-    payload = json.dumps("")
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    }
-    
-    response = requests.request("POST", url, headers=headers, data=payload)
-    return response.json().get("access_token")
+try:
+    from .conversation_store import ConversationStore
+    from .llm_client import LLMClient, LLMConfig, table_generation_instruction
+    from .schema_planner import SchemaPlan, build_generation_context
+except ImportError:
+    from conversation_store import ConversationStore
+    from llm_client import LLMClient, LLMConfig, table_generation_instruction
+    from schema_planner import SchemaPlan, build_generation_context
 
 
-# def get_response(content):
-
-#     url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k?access_token=" + get_access_token()
-    
-#     payload = json.dumps({
-#         "messages": [
-#             {
-#                 "role": "user",
-#                 "content": content+"。注意,请不要加任何多余的文字描述。"
-#             }
-#         ]
-#     })
-#     headers = {
-#         'Content-Type': 'application/json'
-#     }
-    
-#     response = requests.request("POST", url, headers=headers, data=payload)
-    
-#     # print(json.loads(response.text)["result"])
-#     # html_table = markdown2.markdown(json.loads(response.text)["result"])
-#     # return json.loads({'html_table': html_table})
-
-#     return json.loads(response.text)["result"]
+conversation_store = ConversationStore()
 
 
-def get_response(content,model):
-    print(model)
+def get_response(
+    content: str,
+    model: str | None = None,
+    session_id: str = "default",
+    schema_plan: SchemaPlan | None = None,
+):
+    config = LLMConfig.from_env(model=model)
+    client = LLMClient(config)
+    llm_content = build_generation_context(content, schema_plan)
+    user_content = table_generation_instruction(llm_content)
+    messages = conversation_store.get_history(session_id)
+    messages.append({"role": "user", "content": user_content})
+    assistant_content = client.chat(messages)
+    return conversation_store.add_exchange(session_id, content, assistant_content)
 
-    url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/" + model + "?access_token=" + get_access_token()
-    
-    message.append({
-        "role": "user",
-        "content": content+"。注意,输出的结果请不要加任何多余的文字描述，只输出表格。"
-    })
 
-    payload = json.dumps({
-        "messages": message
-    })
-
-    headers = {
-        'Content-Type': 'application/json'
-    }
-
-    response = requests.request("POST", url, headers=headers, data=payload)
-
-    message.append({
-        "role": "assistant",
-        "content": json.loads(response.text)["result"]
-    })
-
-    # print(message)
-
-    return message
-
-def clear_message():
-    message.clear()
-
-# if __name__ == '__main__':
-#     main()
+def clear_message(session_id: str | None = None):
+    conversation_store.clear(session_id)
