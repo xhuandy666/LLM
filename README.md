@@ -56,15 +56,15 @@ flowchart TD
 
 Schema Planner 将自然语言需求转换为字段、类型和约束:
 
-![Schema Planner Demo](docs/assets/demo-schema-plan.png)
+![Schema Planner Demo](docs/assets/demo-schema-plan.svg)
 
 LLM 按 schema 约束生成电商订单 Markdown 表格:
 
-![Generated Table Demo](docs/assets/demo-generated-table.png)
+![Generated Table Demo](docs/assets/demo-generated-table.svg)
 
 Table Validator 对生成结果做确定性质量校验:
 
-![Validation Report Demo](docs/assets/demo-validation-report.png)
+![Validation Report Demo](docs/assets/demo-validation-report.svg)
 
 ## 技术架构
 
@@ -174,11 +174,6 @@ cd frontend
 npm run build
 ```
 
-## 项目包装
-
-- Demo 演示指南: [docs/demo-guide.md](docs/demo-guide.md)
-- 真实 Demo 运行记录: [docs/demo-run.md](docs/demo-run.md)
-- 简历与面试包装: [docs/resume-interview-packaging.md](docs/resume-interview-packaging.md)
 
 ## 当前边界
 
