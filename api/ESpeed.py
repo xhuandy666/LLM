@@ -31,3 +31,7 @@ def get_response(
 
 def clear_message(session_id: str | None = None):
     conversation_store.clear(session_id)
+
+
+def replace_last_assistant_message(session_id: str, assistant_content: str):
+    return conversation_store.replace_last_assistant(session_id, assistant_content)

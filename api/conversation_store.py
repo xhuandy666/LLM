@@ -25,6 +25,16 @@ class ConversationStore:
             history.append({"role": "assistant", "content": assistant_content})
             return deepcopy(history)
 
+    def replace_last_assistant(self, session_id: str, assistant_content: str) -> list[Message]:
+        with self._lock:
+            history = self._histories.setdefault(session_id, [])
+            for message in reversed(history):
+                if message.get("role") == "assistant":
+                    message["content"] = assistant_content
+                    return deepcopy(history)
+            history.append({"role": "assistant", "content": assistant_content})
+            return deepcopy(history)
+
     def clear(self, session_id: str | None = None) -> None:
         with self._lock:
             if session_id:

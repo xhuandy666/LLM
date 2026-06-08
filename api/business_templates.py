@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
+from threading import Lock
 from typing import Any
 
 
@@ -286,9 +288,13 @@ _BUSINESS_TEMPLATES: list[BusinessTemplate] = [
     },
 ]
 
+_CUSTOM_TEMPLATES: dict[str, BusinessTemplate] = {}
+_CUSTOM_TEMPLATE_LOCK = Lock()
+
 
 def list_templates() -> list[BusinessTemplate]:
-    return deepcopy(_BUSINESS_TEMPLATES)
+    with _CUSTOM_TEMPLATE_LOCK:
+        return deepcopy(_BUSINESS_TEMPLATES + list(_CUSTOM_TEMPLATES.values()))
 
 
 def get_template(template_id: str | None) -> BusinessTemplate | None:
@@ -297,4 +303,100 @@ def get_template(template_id: str | None) -> BusinessTemplate | None:
     for template in _BUSINESS_TEMPLATES:
         if template["id"] == template_id:
             return deepcopy(template)
+    with _CUSTOM_TEMPLATE_LOCK:
+        template = _CUSTOM_TEMPLATES.get(template_id)
+        if template:
+            return deepcopy(template)
     return None
+
+
+def save_custom_template(template: BusinessTemplate) -> BusinessTemplate:
+    normalized = normalize_custom_template(template)
+    with _CUSTOM_TEMPLATE_LOCK:
+        _CUSTOM_TEMPLATES[normalized["id"]] = deepcopy(normalized)
+    return deepcopy(normalized)
+
+
+def delete_custom_template(template_id: str) -> bool:
+    with _CUSTOM_TEMPLATE_LOCK:
+        return _CUSTOM_TEMPLATES.pop(template_id, None) is not None
+
+
+def clear_custom_templates() -> None:
+    with _CUSTOM_TEMPLATE_LOCK:
+        _CUSTOM_TEMPLATES.clear()
+
+
+def normalize_custom_template(template: BusinessTemplate) -> BusinessTemplate:
+    name = str(template.get("name") or "").strip()
+    if not name:
+        raise ValueError("template name is required")
+    raw_fields = template.get("fields") or []
+    if not raw_fields:
+        raise ValueError("template fields are required")
+
+    fields = [normalize_template_field(field, index) for index, field in enumerate(raw_fields, start=1)]
+    template_id = str(template.get("id") or "").strip() or build_custom_template_id(name, fields)
+    normalized = {
+        "id": normalize_template_id(template_id),
+        "name": name,
+        "description": str(template.get("description") or "用户保存的自定义业务模板。").strip(),
+        "fields": fields,
+        "custom": True,
+    }
+    return normalized
+
+
+def normalize_template_field(field: dict[str, Any], index: int) -> dict[str, Any]:
+    label = str(field.get("label") or field.get("name") or f"字段{index}").strip()
+    name = normalize_field_name(str(field.get("name") or label), index)
+    field_type = normalize_field_type(str(field.get("type") or "string"))
+    constraints = field.get("constraints") if isinstance(field.get("constraints"), dict) else {}
+    return {
+        "name": name,
+        "label": label,
+        "type": field_type,
+        "required": bool(field.get("required", True)),
+        "constraints": deepcopy(constraints),
+        "example": field.get("example", ""),
+    }
+
+
+def build_custom_template_id(name: str, fields: list[dict[str, Any]]) -> str:
+    keyword_pairs = [
+        ("门店", "store"),
+        ("巡检", "inspection"),
+        ("客户", "customer"),
+        ("订单", "order"),
+        ("学生", "student"),
+        ("招聘", "recruiting"),
+        ("候选人", "candidate"),
+    ]
+    tokens = [token for keyword, token in keyword_pairs if keyword in name]
+    if not tokens:
+        tokens = [field["name"] for field in fields[:2]]
+    return "custom_" + "_".join(tokens)
+
+
+def normalize_template_id(template_id: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9_]+", "_", template_id).strip("_").lower()
+    return normalized or "custom_template"
+
+
+def normalize_field_name(raw_name: str, index: int) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9_]+", "_", raw_name).strip("_").lower()
+    return normalized or f"field_{index}"
+
+
+def normalize_field_type(raw_type: str) -> str:
+    aliases = {
+        "text": "string",
+        "str": "string",
+        "float": "number",
+        "decimal": "number",
+        "int": "integer",
+        "bool": "boolean",
+    }
+    normalized = aliases.get(raw_type.strip().lower(), raw_type.strip().lower())
+    allowed = {"string", "number", "integer", "enum", "boolean", "date", "datetime", "phone", "list"}
+    return normalized if normalized in allowed else "string"

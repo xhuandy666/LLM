@@ -13,10 +13,12 @@ DataSheet Agent 聚焦这个问题: 用自然语言快速构造接近业务语�
 ## 核心能力
 
 - 业务模板: 内置电商订单、学生信息、CRM 销售线索、招聘候选人 4 类模板。
-- Schema Planner: 从自然语言中解析行数、字段、字段类型、枚举值、数值范围和必填项。
+- Schema Planner: 从自然语言中解析行数、字段、字段类型、枚举值、数值范围和必填项，并支持可选 LLM 辅助规划。
 - LLM 生成: 将 schema 注入 prompt，约束模型生成 Markdown 表格。
 - Table Validator: 对生成表格做确定性校验，检查行数、必填字段、枚举值和数值范围。
-- 导出能力: 支持复制 Markdown 表格和导出 CSV。
+- 自动修正: `/api/data` 按 `plan -> generate -> validate -> repair -> validate` 执行，校验失败时会有限次调用 LLM 定向修复。
+- 导出能力: 支持复制 Markdown 表格，并导出 CSV、JSON、Excel 兼容文件和 schema 配置。
+- 模板复用: 支持将当前 schema 保存为自定义业务模板，在当前后端运行期间复用。
 - 模型配置: 默认使用 Qwen/DashScope OpenAI-compatible API，API Key 通过环境变量管理。
 
 ## Agent 工作流
@@ -29,30 +31,24 @@ flowchart TD
     D --> E["LLM 生成 Markdown 表格"]
     E --> F["Table Validator 质量校验"]
     F --> G{"是否通过"}
-    G -- "通过" --> H["展示表格 / 复制 / CSV 导出"]
-    G -- "未通过" --> I["展示问题列表和校验报告"]
+    G -- "通过" --> H["展示表格 / 复制 / 多格式导出"]
+    G -- "未通过" --> I["LLM 定向修复"]
+    I --> J["再次质量校验"]
+    J -- "通过" --> H
+    J -- "仍未通过" --> K["返回结构化问题列表和校验报告"]
 ```
 
-## Demo 示例
+## 示例
 
-推荐演示输入:
+示例输入:
 
 ```text
 生成 5 条电商订单测试数据，金额 10-500 元，支付状态包括已支付、未支付、退款。
 ```
 
-推荐演示流程:
-
-1. 选择 `电商订单测试数据` 模板。
-2. 点击 `规划 Schema`，查看字段、类型和约束。
-3. 点击 `生成表格`，由 LLM 生成 Markdown 表格。
-4. 点击 `质量检查`，查看行数、字段、枚举值和金额范围是否通过校验。
-5. 点击 `导出csv`，导出生成结果。
-
-更完整的 Demo 脚本见 [docs/demo-guide.md](docs/demo-guide.md)。
 真实 API Demo 记录见 [docs/demo-run.md](docs/demo-run.md)。
 
-### Demo 截图
+### 截图
 
 Schema Planner 将自然语言需求转换为字段、类型和约束:
 
@@ -73,9 +69,12 @@ flowchart LR
     FE["Vue 前端"] --> API["Flask API"]
     API --> TPL["Business Templates"]
     API --> PLAN["Schema Planner"]
+    API --> ASSIST["LLM Schema Assist"]
     API --> LLM["LLM Client"]
+    API --> REPAIR["Repair Loop"]
     API --> VAL["Table Validator"]
-    FE --> EXP["CSV Export"]
+    API --> EXP["Export Service"]
+    FE --> EXP
 ```
 
 主要模块:
@@ -83,9 +82,13 @@ flowchart LR
 - `api/llm_client.py`: OpenAI-compatible LLM 调用层。
 - `api/business_templates.py`: 内置业务模板。
 - `api/schema_planner.py`: Schema 规划与自然语言约束解析。
+- `api/schema_assistant.py`: LLM 辅助 schema 规划结果的解析、清洗和合并。
+- `api/generation_pipeline.py`: 表格生成、质量校验和有限自动修复编排。
+- `api/table_repair.py`: 基于校验 issue 构造定向修复 prompt。
 - `api/table_validator.py`: Markdown 表格质量校验。
+- `api/table_exporter.py`: CSV、JSON、Excel 兼容文件和 schema 配置导出。
 - `api/api.py`: Flask REST API。
-- `frontend/src/App.vue`: 前端交互、Schema 展示、质量检查和 CSV 导出。
+- `frontend/src/App.vue`: 前端交互、Schema 展示、质量检查、自动修复状态和多格式导出。
 
 ## 快速开始
 
@@ -104,6 +107,12 @@ python api/api.py
 http://127.0.0.1:5000
 ```
 
+如果 macOS 上 5000 端口被系统服务占用，可临时改用 5001:
+
+```bash
+python -c "from api.api import app; app.run(port=5001)"
+```
+
 ### 前端
 
 ```bash
@@ -116,6 +125,12 @@ npm run serve
 
 ```text
 http://127.0.0.1:8080/
+```
+
+如果后端改用 5001，前端启动时同步指定 API 地址:
+
+```bash
+VUE_APP_API_BASE_URL=http://127.0.0.1:5001 npm run serve
 ```
 
 ## 环境变量
@@ -159,6 +174,22 @@ curl -X POST http://127.0.0.1:5000/api/validate \
   -d '{"markdown":"| 姓名 | 面试状态 |\n| --- | --- |\n| 王同学 | 一面中 |","schema_plan":{"scenario":"demo","scenario_label":"Demo","row_count":1,"schema":[{"name":"candidate_name","label":"姓名","type":"string","required":true,"constraints":{}},{"name":"interview_status","label":"面试状态","type":"enum","required":true,"constraints":{"enum":["待筛选","一面中","二面中","已通过","已淘汰"]}}]}}'
 ```
 
+导出生成结果:
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/export \
+  -H "Content-Type: application/json" \
+  -d '{"format":"schema","markdown":"| 姓名 |\n| --- |\n| 王同学 |","schema_plan":{"scenario":"demo","scenario_label":"Demo","row_count":1,"schema":[{"name":"name","label":"姓名","type":"string","required":true,"constraints":{}}]}}'
+```
+
+保存自定义模板:
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/templates/custom \
+  -H "Content-Type: application/json" \
+  -d '{"name":"门店巡检表","fields":[{"name":"store_name","label":"门店","type":"string","required":true,"constraints":{}},{"name":"status","label":"状态","type":"enum","required":true,"constraints":{"enum":["正常","异常"]}}]}'
+```
+
 ## 验证
 
 后端单元测试:
@@ -178,14 +209,9 @@ npm run build
 ## 当前边界
 
 - 当前主要支持标准 Markdown 表格解析。
-- Schema Planner 使用业务模板和规则解析，不是复杂语义解析器。
+- Schema Planner 仍以业务模板和规则解析为主，LLM 辅助规划是可选增强，不替代后端 schema 清洗和校验。
 - Table Validator 做确定性检查，不保证 LLM 输出一定正确。
+- 自动修正默认最多执行 1 次；持续不合格会返回 422 和结构化校验结果。
 - 当前未接入真实企业数据，定位是模拟业务数据生成。
 - 当前不是复杂多 Agent 系统，而是轻量 Agent 工作流。
-
-## 后续规划
-
-- 自动修正: 校验失败后，将问题列表反馈给 LLM 进行定向修复。
-- 导出增强: 支持 Excel、JSON 和 schema 配置导出。
-- 模板复用: 支持用户保存自定义业务模板。
-- 前端优化: 优化布局、增加 Demo 截图和更清晰的状态展示。
+- 自定义模板当前保存在后端内存中，重启后会丢失；如果要用于长期产品化，需要接入文件或数据库持久化。

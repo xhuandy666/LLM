@@ -111,6 +111,14 @@
           @click="planSchema()"
         >规划 Schema</el-button>
         <el-button
+          type="primary"
+          icon="el-icon-magic-stick"
+          plain
+          size="small"
+          :loading="llmSchemaLoading"
+          @click="planSchemaWithLLMAssist()"
+        >LLM 辅助规划</el-button>
+        <el-button
           type="success"
           icon="el-icon-circle-check"
           plain
@@ -118,6 +126,13 @@
           :loading="validationLoading"
           @click="validateGeneratedTable()"
         >质量检查</el-button>
+        <el-button
+          type="info"
+          icon="el-icon-folder-add"
+          plain
+          size="small"
+          @click="saveCurrentTemplate()"
+        >保存模板</el-button>
       </div>
       <div v-if="schemaPlan" class="schema-panel">
         <div class="schema-summary">
@@ -143,6 +158,7 @@
           </el-tag>
           <span>实际行数：{{ validationResult.summary.row_count.actual }}</span>
           <span>问题数量：{{ validationResult.summary.issue_count }}</span>
+          <span v-if="lastRepairAttempts > 0">自动修复：{{ lastRepairAttempts }} 次</span>
         </div>
         <div v-if="validationResult.issues.length > 0" class="issue-list">
           <div
@@ -178,6 +194,9 @@
       <el-button  type="danger" icon="el-icon-delete" plain @click="clearAll()">清除记录</el-button>
       <el-button  type="primary" icon="el-icon-star-on" plain @click="AutoOptimize()" :loading="loading">{{ loading ? '优化中 ...' : '指令优化' }}</el-button>
       <el-button  type="primary" icon="el-icon-upload" plain @click="exportCsv()">导出csv</el-button>
+      <el-button  type="primary" icon="el-icon-document" plain @click="exportViaBackend('json')">导出JSON</el-button>
+      <el-button  type="primary" icon="el-icon-tickets" plain @click="exportViaBackend('excel')">导出Excel</el-button>
+      <el-button  type="primary" icon="el-icon-notebook-2" plain @click="exportViaBackend('schema')">导出Schema</el-button>
     </div>
   </el-card>
 <!-- v-clipboard:copy="this.messages.content"
@@ -406,7 +425,7 @@ export default {
       assistant_Logo: "https://img2.baidu.com/it/u=2784541464,2988923813&fm=253&fmt=auto&app=138&f=PNG?w=240&h=240",
       dialog: false,
       loading: false,
-      apiBaseUrl: 'http://127.0.0.1:5000',
+      apiBaseUrl: process.env.VUE_APP_API_BASE_URL || 'http://127.0.0.1:5000',
       sessionId: `session-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       selectModels: 'qwen-plus-2025-09-11',
       ModelsIntro: 'Qwen Plus 通过 DashScope OpenAI-compatible API 调用，与 Career Copilot 当前使用的 Qwen 配置保持一致。',
@@ -414,8 +433,11 @@ export default {
       selectedTemplate: '',
       schemaPlan: null,
       schemaLoading: false,
+      llmSchemaLoading: false,
       validationResult: null,
       validationLoading: false,
+      lastGenerationStatus: '',
+      lastRepairAttempts: 0,
       tempModel: '',
       form: {
         name: '',
@@ -445,20 +467,29 @@ export default {
     planSchema(showMessage = true) {
       return this.requestSchemaPlan(this.newMessage, showMessage);
     },
-    requestSchemaPlan(message, showMessage = true) {
+    planSchemaWithLLMAssist() {
+      return this.requestSchemaPlan(this.newMessage, true, true);
+    },
+    requestSchemaPlan(message, showMessage = true, useLLMAssist = false) {
       if (!message.trim() && !this.selectedTemplate) {
         this.$message.warning('请先输入需求或选择业务模板');
         return Promise.resolve(null);
       }
-      this.schemaLoading = true;
+      if (useLLMAssist) {
+        this.llmSchemaLoading = true;
+      } else {
+        this.schemaLoading = true;
+      }
       return axios.post(`${this.apiBaseUrl}/api/schema/plan`, {
         message: message,
-        template_id: this.selectedTemplate || null
+        template_id: this.selectedTemplate || null,
+        model: this.selectModels,
+        use_llm_assist: useLLMAssist
       })
         .then(response => {
           this.schemaPlan = response.data;
           if (showMessage) {
-            this.$message.success('Schema 规划完成');
+            this.$message.success(useLLMAssist ? 'LLM 辅助规划完成' : 'Schema 规划完成');
           }
           return response.data;
         })
@@ -468,7 +499,11 @@ export default {
           return null;
         })
         .finally(() => {
-          this.schemaLoading = false;
+          if (useLLMAssist) {
+            this.llmSchemaLoading = false;
+          } else {
+            this.schemaLoading = false;
+          }
         });
     },
     validateGeneratedTable(showMessage = true) {
@@ -510,7 +545,8 @@ export default {
       const sourceMap = {
         template: '业务模板',
         inferred_template: '意图识别',
-        custom: '自定义'
+        custom: '自定义',
+        llm_assisted: 'LLM 辅助',
       };
       return sourceMap[source] || source;
     },
@@ -560,20 +596,68 @@ export default {
       return rows.map(row => Array.from(row.querySelectorAll('td, th')).map(cell => cell.innerText.trim()));  
     },  
     exportCsv(){
-      const htmlTable = this.parseMarkdownTable();  
-      if (!htmlTable) {
+      return this.exportViaBackend('csv');
+    },
+    exportViaBackend(format) {
+      const lastAssistantMessage = this.getLastAssistantMessage();
+      if (!lastAssistantMessage) {
         this.$message.warning('暂无可导出的表格');
+        return Promise.resolve(null);
+      }
+      if (!this.schemaPlan) {
+        this.$message.warning('请先规划 Schema');
+        return Promise.resolve(null);
+      }
+      return axios.post(`${this.apiBaseUrl}/api/export`, {
+        markdown: lastAssistantMessage.content,
+        schema_plan: this.schemaPlan,
+        format: format
+      })
+        .then(response => {
+          this.downloadContent(response.data.content, response.data.content_type, response.data.filename);
+          this.$message.success('导出成功');
+          return response.data;
+        })
+        .catch(error => {
+          console.error('Error exporting table:', error);
+          this.$message.error(error.response?.data?.error || '导出失败');
+          return null;
+        });
+    },
+    downloadContent(content, contentType, filename) {
+      const blob = new Blob(["\uFEFF" + content], { type: contentType || 'text/plain;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename || 'datasheet-export.txt';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    },
+    saveCurrentTemplate() {
+      if (!this.schemaPlan || !this.schemaPlan.schema || this.schemaPlan.schema.length === 0) {
+        this.$message.warning('请先规划 Schema');
         return;
       }
-      const tableData = this.htmlToTableData(htmlTable);  
-      const csv = Papa.unparse(tableData);  
-      // 创建一个blob对象，并创建一个下载链接来下载CSV文件  
-      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });  
-      const link = document.createElement('a');  
-      link.href = URL.createObjectURL(blob);  
-      link.download = 'table.csv';  
-      link.click();  
-      URL.revokeObjectURL(link.href); // 释放URL对象以节省内存
+      this.$prompt('请输入自定义模板名称', '保存模板', {
+        confirmButtonText: '保存',
+        cancelButtonText: '取消',
+        inputValue: this.schemaPlan.scenario_label || '自定义业务模板'
+      }).then(({ value }) => axios.post(`${this.apiBaseUrl}/api/templates/custom`, {
+        name: value,
+        description: '由当前 Schema 保存的自定义模板。',
+        fields: this.schemaPlan.schema
+      }))
+        .then(response => {
+          const template = response.data.template;
+          this.$message.success('模板已保存');
+          this.loadTemplates();
+          this.selectedTemplate = template.id;
+        })
+        .catch(error => {
+          if (error !== 'cancel') {
+            console.error('Error saving template:', error);
+            this.$message.error(error.response?.data?.error || '模板保存失败');
+          }
+        });
     },
 
     AutoOptimize(){
@@ -637,10 +721,11 @@ export default {
         message: this.copyNewMessage,
         model: this.selectModels,
         session_id: this.sessionId,
-        template_id: this.selectedTemplate || null
+        template_id: this.selectedTemplate || null,
+        max_repair_attempts: 1
       }))
         .then(response => {
-          this.messages = response.data;
+          this.applyGenerationPayload(response.data);
           // this.tableResult = response.data;
           this.$nextTick(() => {
 			// 在 nextTick 之后关闭 loading
@@ -650,13 +735,33 @@ export default {
         })
         .catch(error => {
           console.error('Error fetching table:', error);
-          this.messages.pop();
-          this.$message.error(error.response?.data?.error || '生成表格失败');
+          if (error.response?.data?.messages) {
+            this.applyGenerationPayload(error.response.data);
+            this.$message.warning('自动修复后仍未通过质量检查');
+          } else {
+            this.messages.pop();
+            this.$message.error(error.response?.data?.error || '生成表格失败');
+          }
           this.$nextTick(() => {
             this.loadingInstance.closeLoading();
           });
         });
        
+    },
+    applyGenerationPayload(payload) {
+      if (Array.isArray(payload)) {
+        this.messages = payload;
+        return;
+      }
+      this.messages = payload.messages || this.messages;
+      this.schemaPlan = payload.schema_plan || this.schemaPlan;
+      this.validationResult = payload.validation_result || null;
+      this.lastGenerationStatus = payload.status || '';
+      this.lastRepairAttempts = payload.repair_attempts || 0;
+      if (this.validationResult?.passed) {
+        const message = this.lastRepairAttempts > 0 ? '生成完成，已自动修复并通过校验' : '生成完成，质量校验通过';
+        this.$message.success(message);
+      }
     },
     copy() {
       // this.copiedList=this.messages
@@ -699,6 +804,8 @@ export default {
     clearAll() {
       this.messages = [];
       this.validationResult = null;
+      this.lastGenerationStatus = '';
+      this.lastRepairAttempts = 0;
       this.clearHistory();
     },
     getLastAssistantMessage() {
