@@ -13,7 +13,7 @@ DataSheet Agent 聚焦这个问题: 用自然语言快速构造接近业务语�
 ## 核心能力
 
 - 业务模板: 内置电商订单、学生信息、CRM 销售线索、招聘候选人 4 类模板。
-- Schema Planner: 从自然语言中解析行数、字段、字段类型、枚举值、数值范围和必填项，并支持可选 LLM 辅助规划。
+- Schema Planner: 从自然语言中解析行数、字段、字段类型、枚举值、数值范围和必填项；`/api/data` 生成链路默认启用 LLM 辅助规划。
 - LLM 生成: 将 schema 注入 prompt，约束模型生成 Markdown 表格。
 - Table Validator: 对生成表格做确定性校验，检查行数、必填字段、枚举值和数值范围。
 - 自动修正: `/api/data` 按 `plan -> generate -> validate -> repair -> validate` 执行，校验失败时会有限次调用 LLM 定向修复。
@@ -26,7 +26,7 @@ DataSheet Agent 聚焦这个问题: 用自然语言快速构造接近业务语�
 ```mermaid
 flowchart TD
     A["用户输入业务需求"] --> B["选择模板或自动识别场景"]
-    B --> C["Schema Planner 规划字段和约束"]
+    B --> C["Schema Planner + LLM Assist 规划字段和约束"]
     C --> D["将 Schema 注入生成 Prompt"]
     D --> E["LLM 生成 Markdown 表格"]
     E --> F["Table Validator 质量校验"]
@@ -209,7 +209,7 @@ npm run build
 ## 当前边界
 
 - 当前主要支持标准 Markdown 表格解析。
-- Schema Planner 仍以业务模板和规则解析为主，LLM 辅助规划是可选增强，不替代后端 schema 清洗和校验。
+- Schema Planner 仍以业务模板和规则解析为基础；`/api/data` 默认启用 LLM 辅助规划，也可传入 `use_llm_assist: false` 关闭。
 - Table Validator 做确定性检查，不保证 LLM 输出一定正确。
 - 自动修正默认最多执行 1 次；持续不合格会返回 422 和结构化校验结果。
 - 当前未接入真实企业数据，定位是模拟业务数据生成。

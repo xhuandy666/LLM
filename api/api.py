@@ -136,6 +136,7 @@ def post_data():
     session_id = data.get("session_id") or "default"
     template_id = data.get("template_id") or None
     max_repair_attempts = int(data.get("max_repair_attempts") or 1)
+    use_llm_assist = data.get("use_llm_assist", True)
     if not message:
         return jsonify({"error": "message is required"}), 400
     try:
@@ -145,6 +146,7 @@ def post_data():
             session_id=session_id,
             template_id=template_id,
             max_repair_attempts=max_repair_attempts,
+            use_llm_assist=bool(use_llm_assist),
             message_replacer=replace_last_assistant_message,
         )
         status_code = 200 if result["validation_result"]["passed"] else 422

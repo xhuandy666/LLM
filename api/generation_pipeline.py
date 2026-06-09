@@ -4,11 +4,13 @@ from typing import Any, Callable
 
 try:
     from .ESpeed import get_response
+    from .schema_assistant import assist_schema_plan
     from .schema_planner import plan_schema
     from .table_repair import repair_markdown_table
     from .table_validator import validate_markdown_table
 except ImportError:
     from ESpeed import get_response
+    from schema_assistant import assist_schema_plan
     from schema_planner import plan_schema
     from table_repair import repair_markdown_table
     from table_validator import validate_markdown_table
@@ -17,6 +19,7 @@ except ImportError:
 Generator = Callable[..., list[dict[str, str]]]
 Repairer = Callable[..., str]
 MessageReplacer = Callable[[str, str], list[dict[str, str]]]
+SchemaAssister = Callable[..., dict[str, Any]]
 
 
 def generate_table_with_quality_loop(
@@ -25,11 +28,15 @@ def generate_table_with_quality_loop(
     session_id: str = "default",
     template_id: str | None = None,
     max_repair_attempts: int = 1,
+    use_llm_assist: bool = True,
     generator: Generator = get_response,
     repairer: Repairer = repair_markdown_table,
     message_replacer: MessageReplacer | None = None,
+    schema_assister: SchemaAssister = assist_schema_plan,
 ) -> dict[str, Any]:
     schema_plan = plan_schema(message, template_id=template_id)
+    if use_llm_assist:
+        schema_plan = schema_assister(message, schema_plan, model=model)
     messages = generator(
         message,
         model=model,

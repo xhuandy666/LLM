@@ -40,8 +40,10 @@ class StageThreeApiTest(unittest.TestCase):
 
     def test_data_endpoint_returns_quality_loop_payload(self):
         original_pipeline = api_module.generate_table_with_quality_loop
+        captured = {}
 
         def fake_pipeline(*args, **kwargs):
+            captured.update(kwargs)
             return {
                 "status": "passed",
                 "messages": [{"role": "assistant", "content": "| A |\n|---|\n|1|"}],
@@ -61,6 +63,33 @@ class StageThreeApiTest(unittest.TestCase):
         self.assertEqual(payload["status"], "passed")
         self.assertEqual(payload["repair_attempts"], 1)
         self.assertTrue(payload["validation_result"]["passed"])
+        self.assertTrue(captured["use_llm_assist"])
+
+    def test_data_endpoint_allows_disabling_llm_schema_assist(self):
+        original_pipeline = api_module.generate_table_with_quality_loop
+        captured = {}
+
+        def fake_pipeline(*args, **kwargs):
+            captured.update(kwargs)
+            return {
+                "status": "passed",
+                "messages": [{"role": "assistant", "content": "| A |\n|---|\n|1|"}],
+                "schema_plan": {"scenario": "demo", "schema": []},
+                "validation_result": {"passed": True, "summary": {"issue_count": 0}, "issues": []},
+                "repair_attempts": 0,
+            }
+
+        api_module.generate_table_with_quality_loop = fake_pipeline
+        try:
+            response = self.client.post(
+                "/api/data",
+                json={"message": "生成 1 条数据", "use_llm_assist": False},
+            )
+        finally:
+            api_module.generate_table_with_quality_loop = original_pipeline
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(captured["use_llm_assist"])
 
     def test_data_endpoint_returns_422_when_repair_fails(self):
         original_pipeline = api_module.generate_table_with_quality_loop

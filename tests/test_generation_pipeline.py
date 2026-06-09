@@ -17,6 +17,35 @@ INVALID_MARKDOWN = """
 
 
 class GenerationPipelineTest(unittest.TestCase):
+    def test_uses_llm_schema_assist_by_default(self):
+        calls = {"assist": 0}
+        captured = {}
+
+        def fake_schema_assister(message, base_plan, model=None):
+            calls["assist"] += 1
+            assisted = dict(base_plan)
+            assisted["source"] = "llm_assisted"
+            return assisted
+
+        def fake_generator(message, model=None, session_id="default", schema_plan=None):
+            captured["schema_source"] = schema_plan["source"]
+            return [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": VALID_MARKDOWN},
+            ]
+
+        result = generate_table_with_quality_loop(
+            "生成 1 条招聘候选人信息表。",
+            template_id="recruiting_candidates",
+            generator=fake_generator,
+            schema_assister=fake_schema_assister,
+        )
+
+        self.assertEqual(calls["assist"], 1)
+        self.assertEqual(captured["schema_source"], "llm_assisted")
+        self.assertEqual(result["schema_plan"]["source"], "llm_assisted")
+        self.assertTrue(result["validation_result"]["passed"])
+
     def test_repairs_invalid_generation_before_returning_success(self):
         calls = {"repair": 0}
 
@@ -35,6 +64,7 @@ class GenerationPipelineTest(unittest.TestCase):
             template_id="recruiting_candidates",
             generator=fake_generator,
             repairer=fake_repairer,
+            schema_assister=lambda message, base_plan, model=None: base_plan,
         )
 
         self.assertTrue(result["validation_result"]["passed"])
@@ -59,6 +89,7 @@ class GenerationPipelineTest(unittest.TestCase):
             generator=fake_generator,
             repairer=fake_repairer,
             max_repair_attempts=1,
+            schema_assister=lambda message, base_plan, model=None: base_plan,
         )
 
         self.assertFalse(result["validation_result"]["passed"])
